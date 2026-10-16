@@ -25,7 +25,7 @@ OpenBot 是 **local-first 的 Node 服务**：
 因此 `docs/index.html` **只是项目说明页**，不是可运行的应用。
 要真正使用，必须在本地启动服务。
 
-### 2. 本地运行**未实测**（磁盘不足）
+### 2. 本机未装依赖，但**已在 CI 实测跑通**
 
 ```bash
 git clone https://github.com/sjkncs/openbot.git
@@ -36,9 +36,28 @@ pnpm start       # → http://localhost:4132
 ```
 
 - 本机环境满足前置条件：**Node v22.21.0**（要求 ≥20.12.0）、`pnpm` 可用
-- 但复刻时本机磁盘仅剩约 **0.07 GB**，依赖装不下，因此
-  **`pnpm install` / `pnpm build` / `pnpm start` 均未实际执行，未验证能跑通**
-- 上面的命令取自上游 `README.md` 与 `package.json` 的 `scripts`，未做改动
+- 但本机磁盘严重不足（C 0.035 GB / F 0.359 GB），且 **F、G 为 FAT32——
+  不支持硬链接与符号链接，`pnpm` 的 store 机制在此退化甚至失败**，
+  因此**未在本机安装依赖**
+
+**改用 GitHub Actions 云端 runner 实测，结果如下：**
+
+| 步骤 | 结果 |
+|---|---|
+| runner Node | `v22.23.3` |
+| `pnpm install --no-frozen-lockfile` | ✅ 通过 |
+| `pnpm build` | ✅ 通过，产出 `dist/app/cli.js` |
+| `node dist/app/cli.js start` | ✅ 服务启动 |
+| HTTP 探测 `http://127.0.0.1:4132/` | ✅ **有响应**：`HTTP/1.1 404 Not Found`、`Content-Type: text/html; charset=utf-8` |
+
+> 根路径 **404 是预期的**：OpenBot 暴露的是**事件 API**，不是带首页的网站。
+> 关键证据是它**确实监听 4132 并对 HTTP 作出响应**（不是连接被拒）。
+> 证据来源：CI 运行 **38921858721**（`success`，47s）。
+
+**为何用 `--no-frozen-lockfile`**：上游 `pnpm-lock.yaml` 与 `package.json` 不一致——
+lockfile 多出 `@anthropic-ai/claude-agent-sdk`、`js-yaml`、`@types/js-yaml` 三个 specifier，
+故 `--frozen-lockfile`（CI 默认）必然报 `ERR_PNPM_OUTDATED_LOCKFILE`。
+**这是上游问题，非本次复刻引入。**
 
 ---
 
@@ -46,12 +65,13 @@ pnpm start       # → http://localhost:4132
 
 | 项 | 状态 |
 |---|---|
-| 源码完整克隆 | ✅ |
-| `LICENSE` 保留（MIT） | ✅ |
-| 上游来源与许可在 README / 本文件写明 | ✅ |
+| 源码完整克隆（192 提交） | ✅ |
+| `LICENSE` 保留（MIT，版权归上游） | ✅ |
+| 上游来源与许可在 README / 落地页 / 本文件写明 | ✅ |
 | `docs/index.html` 静态说明页 | ✅ |
-| GitHub Pages 指向 `docs/` | ✅ |
-| `pnpm install` 实测 | ❌ 未做（磁盘不足） |
+| GitHub Pages 指向 `docs/` | ✅ 已发布 |
+| **装依赖 / 构建 / 起服务（云端 runner 实测）** | ✅ **CI 通过，4132 有 HTTP 响应** |
+| 本机安装依赖 | ❌ 未做（磁盘不足 + USB 为 FAT32） |
 | 公网托管运行 | ❌ 未做（该工具读写本地 `~/.openbot`，公网托管会改变其存储与鉴权模型） |
 
 ## 上游同步

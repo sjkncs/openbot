@@ -71,7 +71,7 @@ pnpm start        # → http://localhost:4132</pre>
     <tr><td>源码复刻</td><td>✅ 完整浅克隆自上游，未改动源码</td></tr>
     <tr><td>上游许可</td><td>✅ MIT，已保留 <code>LICENSE</code> 与版权声明</td></tr>
     <tr><td>本页（GitHub Pages）</td><td>✅ 静态说明页</td></tr>
-    <tr><td><code>pnpm install</code> 与 <code>pnpm start</code> 实测</td><td>⚠️ <b>未实测</b>——本机磁盘不足，依赖装不下</td></tr>
+    <tr><td><code>pnpm install</code> / <code>pnpm build</code> / <code>pnpm start</code></td><td>✅ <b>已在 GitHub Actions 的 Node 22 runner 上跑通</b>：构建产出 <code>dist/app/cli.js</code>，服务监听 <code>4132</code> 并对 HTTP 返回响应（<code>HTTP/1.1 404</code>，根路径无首页属预期，它是事件 API）。运行 <code>38921858721</code></td></tr>
     <tr><td>公网托管运行</td><td>❌ 未做。该工具读写本地 <code>~/.openbot</code>，公网托管会改变其存储与鉴权模型</td></tr>
   </table>
 
