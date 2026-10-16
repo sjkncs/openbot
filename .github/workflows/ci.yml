@@ -1,0 +1,70 @@
+name: ci
+
+# 目的：用云端 runner 验证本复刻能在 Node 22 上装依赖、构建、并真正把服务起起来。
+# 本地磁盘不足以安装依赖（见 REPLICA_NOTES.md），因此把"实测"放到 CI 里做，
+# 日志本身就是可核验的证据，而不是我口头声称"应该能跑"。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 记录环境
+        run: |
+          node --version
+          pnpm --version
+          echo "--- 磁盘 ---"
+          df -h /
+
+      - name: 安装依赖（硬门槛）
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建（硬门槛）
+        run: pnpm build
+
+      - name: 产物清单
+        run: |
+          echo "--- dist ---"
+          find dist -type f | head -40
+          du -sh dist
+
+      - name: 实起服务并探测 4132（信息性，失败不阻断）
+        continue-on-error: true
+        run: |
+          set -x
+          node dist/app/cli.js start > server.log 2>&1 &
+          SRV=$!
+          for i in $(seq 1 15); do
+            sleep 2
+            if curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:4132/ 2>/dev/null | grep -qE '^[23]'; then
+              echo "PORT_4132_UP=yes"
+              break
+            fi
+          done
+          echo "--- HTTP 探测 ---"
+          curl -sS -i --max-time 8 http://127.0.0.1:4132/ | head -25 || echo "curl 未取得响应"
+          echo "--- 服务器日志 ---"
+          cat server.log || true
+          kill $SRV 2>/dev/null || true
+
+      - name: 上传运行日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-log
+          path: server.log
+          if-no-files-found: ignore
