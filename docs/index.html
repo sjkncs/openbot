@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenBot — Grok Bot 的开源本地复刻（sjkncs 复刻版）</title>
+<style>
+  :root{--ink:#142D40;--acc:#007DB5;--bg:#EDF2F9;--line:#B8CDE7;--warn:#FF0000}
+  *{box-sizing:border-box}
+  body{margin:0;font:16px/1.7 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:var(--ink);background:#fff}
+  header{background:var(--ink);color:#fff;padding:56px 24px}
+  .wrap{max-width:880px;margin:0 auto}
+  h1{margin:0 0 8px;font-size:34px;letter-spacing:.5px}
+  .sub{opacity:.85;font-size:17px}
+  .badge{display:inline-block;margin:14px 8px 0 0;padding:4px 10px;border:1px solid rgba(255,255,255,.4);border-radius:999px;font-size:13px}
+  main{padding:40px 24px}
+  h2{font-size:21px;margin:34px 0 10px;padding-left:10px;border-left:4px solid var(--acc)}
+  code,pre{font-family:ui-monospace,Consolas,monospace}
+  pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto}
+  .note{background:var(--bg);border-left:4px solid var(--acc);border-radius:0 8px 8px 0;padding:12px 16px;margin:16px 0}
+  .warn{border-left-color:var(--warn)}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:15px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left}
+  th{background:var(--bg)}
+  footer{background:#F5F8FA;border-top:1px solid var(--line);padding:24px;font-size:14px;color:#4a5a68}
+  a{color:var(--acc)}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>OpenBot</h1>
+    <div class="sub">本地优先的 AI agent 运行时 —— Grok Bot / Muse 类产品的开源本地复刻</div>
+    <span class="badge">MIT License</span>
+    <span class="badge">Node ≥ 20.12</span>
+    <span class="badge">本地端口 4132</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="note warn">
+    <b>这不是在线应用。</b>OpenBot 是 <b>local-first</b> 的 Node 服务：它在本机监听
+    <code>4132</code> 端口，数据写入 <code>~/.openbot</code>。
+    GitHub Pages 只能托管这个静态说明页，<b>无法在这里运行服务</b>。
+    要真正使用，请在本地按下面的步骤启动。
+  </div>
+
+  <h2>它是什么</h2>
+  <ul>
+    <li>在本机跑一个 agent 服务（默认 <code>http://localhost:4132</code>）</li>
+    <li>暴露小型事件 API，并通过 <b>Server-Sent Events</b> 向客户端流式推送</li>
+    <li>channels / threads / agents / plugins / config 存放在 <code>~/.openbot</code></li>
+    <li>自带 <code>system</code> agent（LLM 运行时 + 存储工具）与 <code>state</code> agent（确定性存储读取，不走 LLM）</li>
+    <li>可从 <code>~/.openbot/agents/&lt;agent-id&gt;/AGENT.md</code> 载入自定义 agent</li>
+  </ul>
+
+  <h2>本地运行</h2>
+  <pre>git clone https://github.com/sjkncs/openbot.git
+cd openbot
+pnpm install
+pnpm build
+pnpm start        # → http://localhost:4132</pre>
+
+  <div class="note">
+    需要 Node <code>&gt;= 20.12.0</code>。<code>pnpm dev</code> 可热重载开发。
+  </div>
+
+  <h2>复刻状态（如实标注）</h2>
+  <table>
+    <tr><th>项</th><th>状态</th></tr>
+    <tr><td>源码复刻</td><td>✅ 完整浅克隆自上游，未改动源码</td></tr>
+    <tr><td>上游许可</td><td>✅ MIT，已保留 <code>LICENSE</code> 与版权声明</td></tr>
+    <tr><td>本页（GitHub Pages）</td><td>✅ 静态说明页</td></tr>
+    <tr><td><code>pnpm install</code> 与 <code>pnpm start</code> 实测</td><td>⚠️ <b>未实测</b>——本机磁盘不足，依赖装不下</td></tr>
+    <tr><td>公网托管运行</td><td>❌ 未做。该工具读写本地 <code>~/.openbot</code>，公网托管会改变其存储与鉴权模型</td></tr>
+  </table>
+
+  <h2>与上游的关系</h2>
+  <p>
+    上游：<a href="https://github.com/meetopenbot/openbot">meetopenbot/openbot</a>（MIT）。
+    本仓库是其<b>代码复刻镜像</b>，用于本地实验与学习，<b>不是上游官方仓库</b>，也不代表上游认可。
+    问题与改进请优先提给上游。
+  </p>
+</main>
+
+<footer class="wrap">
+  复刻镜像由 <a href="https://github.com/sjkncs">sjkncs</a> 维护 ｜
+  上游 MIT License ｜ 本页为静态说明，运行服务请在本地启动
+</footer>
+</body>
+</html>
