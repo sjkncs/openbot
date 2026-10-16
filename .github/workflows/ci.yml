@@ -65,6 +65,39 @@ jobs:
           cat server.log || true
           kill $SRV 2>/dev/null || true
 
+      - name: 实测 HTTP API（硬门槛）
+        run: |
+          set -e
+          node dist/app/cli.js start > api.log 2>&1 &
+          SRV=$!
+          trap 'kill $SRV 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do
+            sleep 2
+            if curl -sS -o /dev/null --max-time 5 http://127.0.0.1:4132/api/health; then break; fi
+          done
+          echo "=== GET /api/health ==="
+          curl -sS -o health.json -w 'HTTP %{http_code}\n' --max-time 8 http://127.0.0.1:4132/api/health
+          cat health.json; echo
+          echo "=== GET /api/state ==="
+          curl -sS -o state.json -w 'HTTP %{http_code}\n' --max-time 8 http://127.0.0.1:4132/api/state
+          head -c 400 state.json; echo
+          echo "=== POST /api/publish（故意非法体，应 400 且列出校验错误）==="
+          curl -sS -o pub.json -w 'HTTP %{http_code}\n' --max-time 8 \
+            -X POST -H 'Content-Type: application/json' \
+            -d '{"__probe__":true}' \
+            'http://127.0.0.1:4132/api/publish?channelId=ci-probe'
+          head -c 500 pub.json; echo
+          echo "--- 断言 ---"
+          grep -q '"status"' health.json || grep -qE '.' health.json
+          test "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 8 http://127.0.0.1:4132/api/health)" = "200"
+          echo "HEALTH_200=ok"
+          test "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 8 http://127.0.0.1:4132/api/state)" = "200"
+          echo "STATE_200=ok"
+          test "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 8 -X POST -H 'Content-Type: application/json' -d '{"__probe__":true}' 'http://127.0.0.1:4132/api/publish?channelId=ci-probe')" = "400"
+          echo "PUBLISH_VALIDATION_400=ok"
+          echo "=== 服务器日志 ==="
+          head -40 api.log || true
+
       - name: 上传运行日志
         if: always()
         uses: actions/upload-artifact@v4
