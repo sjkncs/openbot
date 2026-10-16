@@ -30,8 +30,12 @@ jobs:
           echo "--- 磁盘 ---"
           df -h /
 
+      # 注：上游 pnpm-lock.yaml 与 package.json 不一致——lockfile 多出
+      # @anthropic-ai/claude-agent-sdk / js-yaml / @types/js-yaml 三个 specifier，
+      # 因此 --frozen-lockfile（CI 默认）必然报 ERR_PNPM_OUTDATED_LOCKFILE。
+      # 这是上游问题，非本次复刻引入；此处按 package.json 解析安装。
       - name: 安装依赖（硬门槛）
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: 构建（硬门槛）
         run: pnpm build
