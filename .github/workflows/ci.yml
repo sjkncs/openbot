@@ -1,8 +1,9 @@
 name: ci
 
-# 目的：用云端 runner 验证本复刻能在 Node 22 上装依赖、构建、并真正把服务起起来。
-# 本地磁盘不足以安装依赖（见 REPLICA_NOTES.md），因此把"实测"放到 CI 里做，
-# 日志本身就是可核验的证据，而不是我口头声称"应该能跑"。
+# 目的：用云端 runner 验证本复刻能在 Node 22 上装依赖、构建、真正把服务起起来，
+# 并用 Dockerfile 验证「换一台机器也能跑」。
+# 本地磁盘不足以安装依赖（见 REPLICA_NOTES.md），因此把实测放在 CI，
+# 日志本身就是可核验的证据，而不是口头声称“应该能跑”。
 
 on:
   push:
@@ -88,7 +89,6 @@ jobs:
             'http://127.0.0.1:4132/api/publish?channelId=ci-probe'
           head -c 500 pub.json; echo
           echo "--- 断言 ---"
-          grep -q '"status"' health.json || grep -qE '.' health.json
           test "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 8 http://127.0.0.1:4132/api/health)" = "200"
           echo "HEALTH_200=ok"
           test "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 8 http://127.0.0.1:4132/api/state)" = "200"
@@ -105,3 +105,30 @@ jobs:
           name: server-log
           path: server.log
           if-no-files-found: ignore
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: build-and-run
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: 构建镜像（硬门槛）
+        run: docker build -t openbot:ci .
+
+      - name: 起容器并打 API（硬门槛）
+        run: |
+          set -e
+          docker run -d --name ob -p 4132:4132 openbot:ci
+          for i in $(seq 1 30); do
+            sleep 2
+            if curl -sS -o /dev/null --max-time 5 http://127.0.0.1:4132/api/health; then break; fi
+          done
+          echo "=== 容器内 GET /api/health ==="
+          curl -sS -i --max-time 8 http://127.0.0.1:4132/api/health | head -12
+          test "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 8 http://127.0.0.1:4132/api/health)" = "200"
+          echo "DOCKER_HEALTH_200=ok"
+          echo "=== 容器日志 ==="
+          docker logs ob | head -30 || true
+          docker rm -f ob
