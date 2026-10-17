@@ -3,89 +3,398 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>OpenBot — Grok Bot 的开源本地复刻（sjkncs 复刻版）</title>
+<title>OpenBot · 本地优先的 AI Agent 运行时</title>
+<meta name="description" content="OpenBot 是本地优先的 AI agent 运行时：一条命令起服务，事件 API + SSE 流式推送，数据全部留在你自己的机器上。MIT 开源。" />
+<meta property="og:title" content="OpenBot · 本地优先的 AI Agent 运行时" />
+<meta property="og:description" content="本地起服务，事件 API + SSE，数据留在本机 ~/.openbot。MIT 开源。" />
+<meta property="og:type" content="website" />
 <style>
-  :root{--ink:#142D40;--acc:#007DB5;--bg:#EDF2F9;--line:#B8CDE7;--warn:#FF0000}
-  *{box-sizing:border-box}
-  body{margin:0;font:16px/1.7 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:var(--ink);background:#fff}
-  header{background:var(--ink);color:#fff;padding:56px 24px}
-  .wrap{max-width:880px;margin:0 auto}
-  h1{margin:0 0 8px;font-size:34px;letter-spacing:.5px}
-  .sub{opacity:.85;font-size:17px}
-  .badge{display:inline-block;margin:14px 8px 0 0;padding:4px 10px;border:1px solid rgba(255,255,255,.4);border-radius:999px;font-size:13px}
-  main{padding:40px 24px}
-  h2{font-size:21px;margin:34px 0 10px;padding-left:10px;border-left:4px solid var(--acc)}
-  code,pre{font-family:ui-monospace,Consolas,monospace}
-  pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto}
-  .note{background:var(--bg);border-left:4px solid var(--acc);border-radius:0 8px 8px 0;padding:12px 16px;margin:16px 0}
-  .warn{border-left-color:var(--warn)}
-  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:15px}
-  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left}
-  th{background:var(--bg)}
-  footer{background:#F5F8FA;border-top:1px solid var(--line);padding:24px;font-size:14px;color:#4a5a68}
-  a{color:var(--acc)}
+:root{
+  /* 主色 —— 取自参照页的 --blue，替换其 --red 作主色 */
+  --acc:#1E5AA8; --dacc:#164780; --lacc:#E8F0FE; --cacc:#2E6FC4;
+  /* 中性 */
+  --bg:#FFFFFF; --g1:#F5F5F5; --g2:#FAFAFA; --line:#E5E5E5; --grid:#CCCCCC;
+  --t1:#1F1F1F; --t2:#666666; --t3:#999999;
+  /* 语义 */
+  --ok:#2E9E5B; --warn:#E6A23C; --err:#D92B2B; --dark:#142D40;
+  /* 阴影（沿用参照页尺度） */
+  --sh:0 2px 6px -2px rgba(0,0,0,.06);
+  --sh2:0 4px 12px rgba(0,0,0,.10);
+  /* 提示色组 */
+  --nt1b:#E8F0FE; --nt1t:#1E5AA8;
+  --nt2b:#E0F5F2; --nt2t:#0F8B8D;
+  --nt3b:#FEF3E2; --nt3t:#C77D22;
+  --nt4b:#F0F0F0; --nt4t:#555555;
+  --nt5b:#F3EDFB; --nt5t:#7C4DBE;
+  /* 圆角 */
+  --r-xs:4px; --r-sm:6px; --r-md:8px; --r-lg:12px; --r-pill:999px;
+  /* 字号 */
+  --fs-label:12px; --fs-num-sm:13px; --fs-body:14px; --fs-num:15px;
+  --fs-title:18px; --fs-metric:30px;
+  /* 间距 */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px; --sp-8:72px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:var(--fs-body); line-height:1.7; color:var(--t1); background:var(--bg);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 var(--sp-5)}
+code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace}
+a{color:var(--acc);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ---------- 导航 ---------- */
+nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:var(--sp-5);height:60px}
+.brand{font-weight:700;font-size:var(--fs-title);letter-spacing:.3px;color:var(--dark);display:flex;align-items:center;gap:var(--sp-2)}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 4px var(--lacc)}
+nav .links{display:flex;gap:var(--sp-5);margin-left:auto;font-size:var(--fs-num-sm)}
+nav .links a{color:var(--t2)}
+nav .links a:hover{color:var(--acc);text-decoration:none}
+
+/* ---------- Hero ---------- */
+header.hero{
+  background:
+    radial-gradient(900px 380px at 12% -10%, var(--lacc) 0%, transparent 60%),
+    radial-gradient(700px 320px at 92% 8%, var(--nt2b) 0%, transparent 55%),
+    linear-gradient(180deg,#FFFFFF 0%,var(--g1) 100%);
+  border-bottom:1px solid var(--line);
+  padding:var(--sp-8) 0 var(--sp-7);
+}
+.eyebrow{display:inline-flex;align-items:center;gap:var(--sp-2);background:var(--bg);border:1px solid var(--line);
+  border-radius:var(--r-pill);padding:5px 12px;font-size:var(--fs-label);color:var(--t2);box-shadow:var(--sh)}
+.eyebrow b{color:var(--acc)}
+h1.big{font-size:46px;line-height:1.22;letter-spacing:-.5px;margin:var(--sp-4) 0 var(--sp-3);color:var(--dark);font-weight:800}
+h1.big em{font-style:normal;color:var(--acc)}
+.lede{font-size:17px;color:var(--t2);max-width:660px}
+.badges{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin:var(--sp-4) 0 var(--sp-5)}
+.badge{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--line);
+  border-radius:var(--r-pill);padding:4px 11px;font-size:var(--fs-label);color:var(--t2);box-shadow:var(--sh)}
+.badge .k{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.cta{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:var(--r-md);
+  font-size:var(--fs-num);font-weight:600;border:1px solid transparent;cursor:pointer;transition:all .18s ease}
+.btn-p{background:var(--acc);color:#fff;box-shadow:0 4px 12px rgba(30,90,168,.25)}
+.btn-p:hover{background:var(--dacc);text-decoration:none;transform:translateY(-1px)}
+.btn-s{background:var(--bg);color:var(--t1);border-color:var(--line);box-shadow:var(--sh)}
+.btn-s:hover{border-color:var(--acc);color:var(--acc);text-decoration:none}
+.hint{font-size:var(--fs-label);color:var(--t3)}
+
+/* ---------- 通用区段 ---------- */
+section.blk{padding:var(--sp-8) 0;border-bottom:1px solid var(--line)}
+section.blk.alt{background:var(--g2)}
+.slabel{font-size:var(--fs-label);font-weight:700;letter-spacing:1.4px;color:var(--acc);text-transform:uppercase}
+h2.sec{font-size:30px;line-height:1.3;margin:var(--sp-2) 0 var(--sp-2);color:var(--dark);font-weight:800}
+p.sub{color:var(--t2);max-width:720px;margin-bottom:var(--sp-5)}
+
+/* ---------- 卡片 ---------- */
+.grid{display:grid;gap:var(--sp-4)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--sp-5);box-shadow:var(--sh);
+  transition:all .2s ease}
+.card:hover{box-shadow:var(--sh2);transform:translateY(-2px);border-color:#D8E3F2}
+.card h3{font-size:var(--fs-title);margin-bottom:var(--sp-2);color:var(--dark)}
+.card p{font-size:var(--fs-num-sm);color:var(--t2)}
+.ico{width:38px;height:38px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;
+  font-size:19px;margin-bottom:var(--sp-3)}
+.i1{background:var(--nt1b);color:var(--nt1t)}
+.i2{background:var(--nt2b);color:var(--nt2t)}
+.i3{background:var(--nt3b);color:var(--nt3t)}
+.i4{background:var(--nt4b);color:var(--nt4t)}
+.i5{background:var(--nt5b);color:var(--nt5t)}
+.i6{background:var(--lacc);color:var(--acc)}
+
+/* ---------- 代码 ---------- */
+pre.code{background:var(--dark);color:#E8F0FE;border-radius:var(--r-lg);padding:var(--sp-5);
+  overflow:auto;font-size:var(--fs-num-sm);line-height:1.85;box-shadow:var(--sh2);position:relative}
+pre.code .c{color:#7FA6D9}
+pre.code .g{color:#8FD6A9}
+pre.code .y{color:#F0C674}
+
+/* ---------- 三步 ---------- */
+.steps{counter-reset:s;display:grid;gap:var(--sp-4);grid-template-columns:repeat(3,1fr)}
+.step{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--sp-5);position:relative;box-shadow:var(--sh)}
+.step::before{counter-increment:s;content:counter(s);position:absolute;top:-14px;left:var(--sp-5);
+  width:28px;height:28px;border-radius:50%;background:var(--acc);color:#fff;font-size:var(--fs-num-sm);font-weight:700;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(30,90,168,.3)}
+.step h4{margin:var(--sp-2) 0 var(--sp-2);font-size:var(--fs-num);color:var(--dark)}
+.step code{background:var(--g1);border:1px solid var(--line);border-radius:var(--r-xs);padding:2px 6px;font-size:var(--fs-label)}
+
+/* ---------- 表格 ---------- */
+table{width:100%;border-collapse:collapse;font-size:var(--fs-num-sm);background:var(--bg);
+  border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh)}
+th,td{padding:11px var(--sp-4);text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--g1);font-weight:700;color:var(--dark);font-size:var(--fs-label);letter-spacing:.4px}
+tr:last-child td{border-bottom:none}
+td code{background:var(--lacc);color:var(--dacc);border-radius:var(--r-xs);padding:2px 6px;font-size:var(--fs-label)}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:var(--fs-label);color:var(--t2)}
+
+/* ---------- 提示条 ---------- */
+.note{border-radius:var(--r-lg);padding:var(--sp-4) var(--sp-5);font-size:var(--fs-num-sm);
+  border-left:4px solid var(--acc);background:var(--nt1b);color:var(--nt1t);margin:var(--sp-4) 0}
+.note.warn{border-left-color:var(--warn);background:var(--nt3b);color:var(--nt3t)}
+.note.ok{border-left-color:var(--ok);background:var(--nt2b);color:var(--nt2t)}
+.note b{font-weight:700}
+
+/* ---------- 证据块 ---------- */
+.ev{background:var(--dark);border-radius:var(--r-lg);padding:var(--sp-5);color:#CFE0F5;
+  font-family:ui-monospace,Consolas,monospace;font-size:var(--fs-label);line-height:1.9;overflow:auto;box-shadow:var(--sh2)}
+.ev .k{color:#8FD6A9}
+.ev .n{color:#F0C674}
+.ev .d{color:#7FA6D9}
+.pill{display:inline-block;padding:3px 9px;border-radius:var(--r-pill);font-size:11px;font-weight:700}
+.p-ok{background:var(--nt2b);color:var(--nt2t)}
+.p-no{background:#FDECEA;color:#B71C1C}
+.p-wt{background:var(--nt3b);color:var(--nt3t)}
+
+/* ---------- 页脚 ---------- */
+footer{background:var(--dark);color:#9FB6CE;padding:var(--sp-7) 0;font-size:var(--fs-num-sm)}
+footer a{color:#CFE0F5}
+footer .cols{display:grid;grid-template-columns:2fr 1fr 1fr;gap:var(--sp-6)}
+footer h5{color:#fff;font-size:var(--fs-num-sm);margin-bottom:var(--sp-2);letter-spacing:.4px}
+footer ul{list-style:none}
+footer li{margin-bottom:6px}
+.fbot{border-top:1px solid rgba(255,255,255,.12);margin-top:var(--sp-6);padding-top:var(--sp-4);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:var(--sp-3);font-size:var(--fs-label);color:#7C93AB}
+
+@media (max-width:900px){
+  .g3,.g4,.steps,footer .cols{grid-template-columns:1fr 1fr}
+  h1.big{font-size:34px} h2.sec{font-size:24px}
+  nav .links{display:none}
+}
+@media (max-width:620px){
+  .g2,.g3,.g4,.steps,footer .cols{grid-template-columns:1fr}
+  h1.big{font-size:29px}
+}
 </style>
 </head>
 <body>
-<header>
+
+<nav>
   <div class="wrap">
-    <h1>OpenBot</h1>
-    <div class="sub">本地优先的 AI agent 运行时 —— Grok Bot / Muse 类产品的开源本地复刻</div>
-    <span class="badge">MIT License</span>
-    <span class="badge">Node ≥ 20.12</span>
-    <span class="badge">本地端口 4132</span>
+    <div class="brand"><span class="dot"></span>OpenBot</div>
+    <div class="links">
+      <a href="#why">为什么本地</a>
+      <a href="#start">三步开始</a>
+      <a href="#api">API</a>
+      <a href="#evidence">实测证据</a>
+      <a href="#replica">复刻声明</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">本地优先 · <b>MIT 开源</b> · 数据不出本机</span>
+    <h1 class="big">你的 AI Agent，<em>跑在你自己机器上</em></h1>
+    <p class="lede">
+      OpenBot 是一个本地优先的 agent 运行时。一条命令起服务，暴露一个极小的<b>事件 API</b>，
+      用 <b>SSE</b> 把 agent 的思考与动作流式推给你的客户端。渠道、会话、agent、插件与配置，
+      全部落在本机的 <code>~/.openbot</code>。
+    </p>
+    <div class="badges">
+      <span class="badge"><span class="k"></span>Node ≥ 20.12</span>
+      <span class="badge"><span class="k"></span>本地端口 4132</span>
+      <span class="badge"><span class="k"></span>事件 API + SSE</span>
+      <span class="badge"><span class="k"></span>MIT License</span>
+      <span class="badge"><span class="k"></span>CI 已实测</span>
+    </div>
+    <div class="cta">
+      <a class="btn btn-p" href="#start">三步开始 →</a>
+      <a class="btn btn-s" href="#api">查看 API</a>
+      <a class="btn btn-s" href="https://github.com/sjkncs/openbot">GitHub 仓库</a>
+    </div>
+    <p class="hint" style="margin-top:var(--sp-3)">本页是静态说明页。OpenBot 不是在线应用——它必须在你自己的机器上运行。</p>
   </div>
 </header>
 
-<main class="wrap">
-  <div class="note warn">
-    <b>这不是在线应用。</b>OpenBot 是 <b>local-first</b> 的 Node 服务：它在本机监听
-    <code>4132</code> 端口，数据写入 <code>~/.openbot</code>。
-    GitHub Pages 只能托管这个静态说明页，<b>无法在这里运行服务</b>。
-    要真正使用，请在本地按下面的步骤启动。
+<section class="blk" id="why">
+  <div class="wrap">
+    <div class="slabel">Why Local</div>
+    <h2 class="sec">为什么必须是本地优先</h2>
+    <p class="sub">把 agent 放在云端，你就要把文件、上下文和凭据一起交出去。OpenBot 反过来做：运行时在你机器上，模型调用由你自己的密钥发起。</p>
+    <div class="grid g3">
+      <div class="card">
+        <div class="ico i1">🔒</div>
+        <h3>数据不出本机</h3>
+        <p>渠道、会话、消息与插件状态存放在 <code>~/.openbot</code>，不上传任何托管服务。</p>
+      </div>
+      <div class="card">
+        <div class="ico i2">🔑</div>
+        <h3>自己的密钥</h3>
+        <p>通过 AI SDK 直连 Anthropic / Google / OpenAI，密钥留在本机环境变量里。</p>
+      </div>
+      <div class="card">
+        <div class="ico i3">🧩</div>
+        <h3>可插拔 Agent</h3>
+        <p>从 <code>~/.openbot/agents/&lt;id&gt;/AGENT.md</code> 载入自定义 agent，无需改动运行时。</p>
+      </div>
+    </div>
   </div>
+</section>
 
-  <h2>它是什么</h2>
-  <ul>
-    <li>在本机跑一个 agent 服务（默认 <code>http://localhost:4132</code>）</li>
-    <li>暴露小型事件 API，并通过 <b>Server-Sent Events</b> 向客户端流式推送</li>
-    <li>channels / threads / agents / plugins / config 存放在 <code>~/.openbot</code></li>
-    <li>自带 <code>system</code> agent（LLM 运行时 + 存储工具）与 <code>state</code> agent（确定性存储读取，不走 LLM）</li>
-    <li>可从 <code>~/.openbot/agents/&lt;agent-id&gt;/AGENT.md</code> 载入自定义 agent</li>
-  </ul>
+<section class="blk alt" id="start">
+  <div class="wrap">
+    <div class="slabel">Quick Start</div>
+    <h2 class="sec">三步，把它跑起来</h2>
+    <p class="sub">需要 Node ≥ 20.12。整个过程不依赖任何托管服务。</p>
+    <div class="steps">
+      <div class="step">
+        <h4>克隆</h4>
+        <p style="font-size:var(--fs-num-sm);color:var(--t2)">把仓库拉到本地。</p>
+        <p style="margin-top:var(--sp-2)"><code>git clone …/openbot.git</code></p>
+      </div>
+      <div class="step">
+        <h4>安装与构建</h4>
+        <p style="font-size:var(--fs-num-sm);color:var(--t2)">用 pnpm 装依赖并编译 TypeScript。</p>
+        <p style="margin-top:var(--sp-2)"><code>pnpm install &amp;&amp; pnpm build</code></p>
+      </div>
+      <div class="step">
+        <h4>启动</h4>
+        <p style="font-size:var(--fs-num-sm);color:var(--t2)">服务监听 4132，浏览器或 curl 均可访问。</p>
+        <p style="margin-top:var(--sp-2)"><code>pnpm start</code></p>
+      </div>
+    </div>
 
-  <h2>本地运行</h2>
-  <pre>git clone https://github.com/sjkncs/openbot.git
-cd openbot
-pnpm install
-pnpm build
-pnpm start        # → http://localhost:4132</pre>
+<pre class="code"><span class="c"># 1) 克隆</span>
+git clone https://github.com/sjkncs/openbot.git
+<span class="c"># 2) 安装 + 构建（约 200–500 MB 依赖）</span>
+cd openbot &amp;&amp; pnpm install &amp;&amp; pnpm build
+<span class="c"># 3) 启动 —— 控制台会打印下面这行</span>
+pnpm start
+<span class="g">OpenBot server listening at http://localhost:4132</span>
+</pre>
 
-  <div class="note">
-    需要 Node <code>&gt;= 20.12.0</code>。<code>pnpm dev</code> 可热重载开发。
+    <div class="note warn">
+      <b>本地未在本机验证过。</b>复刻时所用机器磁盘不足，且外接盘为 FAT32（不支持硬链接与符号链接，
+      pnpm 的 store 机制会退化）。因此改用云端 runner 实测——见下方「实测证据」。
+    </div>
   </div>
+</section>
 
-  <h2>复刻状态（如实标注）</h2>
-  <table>
-    <tr><th>项</th><th>状态</th></tr>
-    <tr><td>源码复刻</td><td>✅ 完整浅克隆自上游，未改动源码</td></tr>
-    <tr><td>上游许可</td><td>✅ MIT，已保留 <code>LICENSE</code> 与版权声明</td></tr>
-    <tr><td>本页（GitHub Pages）</td><td>✅ 静态说明页</td></tr>
-    <tr><td><code>pnpm install</code> / <code>pnpm build</code> / <code>pnpm start</code></td><td>✅ <b>已在 GitHub Actions 的 Node 22 runner 上跑通</b>：构建产出 <code>dist/app/cli.js</code>，服务监听 <code>4132</code> 并对 HTTP 返回响应（<code>HTTP/1.1 404</code>，根路径无首页属预期，它是事件 API）。运行 <code>38921858721</code></td></tr>
-    <tr><td>公网托管运行</td><td>❌ 未做。该工具读写本地 <code>~/.openbot</code>，公网托管会改变其存储与鉴权模型</td></tr>
-  </table>
+<section class="blk" id="api">
+  <div class="wrap">
+    <div class="slabel">API Surface</div>
+    <h2 class="sec">极小的事件 API</h2>
+    <p class="sub">运行时不暴露庞大的 REST 面，只给四个入口。客户端订阅 SSE，把事件发回去即可驱动 agent。</p>
+    <table>
+      <thead>
+        <tr><th style="width:210px">端点</th><th style="width:70px">方法</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>/api/health</code></td><td class="mono">GET</td><td>健康检查，返回运行时状态、版本与 apiVersion</td></tr>
+        <tr><td><code>/api/events</code></td><td class="mono">GET</td><td><b>SSE 流</b>：订阅 agent 的思考、工具调用与结果事件</td></tr>
+        <tr><td><code>/api/publish</code></td><td class="mono">POST</td><td>发布事件以驱动 agent（需 <code>channelId</code>，请求体经 zod 校验）</td></tr>
+        <tr><td><code>/api/state</code></td><td class="mono">GET</td><td>读取运行时状态（渠道 / 会话 / agent / 插件）</td></tr>
+      </tbody>
+    </table>
 
-  <h2>与上游的关系</h2>
-  <p>
-    上游：<a href="https://github.com/meetopenbot/openbot">meetopenbot/openbot</a>（MIT）。
-    本仓库是其<b>代码复刻镜像</b>，用于本地实验与学习，<b>不是上游官方仓库</b>，也不代表上游认可。
-    问题与改进请优先提给上游。
-  </p>
-</main>
+    <div class="note">
+      <b>内置两个 agent：</b><code>system</code> 走 LLM 运行时并带存储工具；
+      <code>state</code> 是<b>确定性</b>的存储读取 agent，<b>不需要任何模型密钥</b>——适合做冒烟测试与自动化校验。
+    </div>
+  </div>
+</section>
 
-<footer class="wrap">
-  复刻镜像由 <a href="https://github.com/sjkncs">sjkncs</a> 维护 ｜
-  上游 MIT License ｜ 本页为静态说明，运行服务请在本地启动
+<section class="blk alt" id="evidence">
+  <div class="wrap">
+    <div class="slabel">Evidence</div>
+    <h2 class="sec">实测证据，不是「应该能跑」</h2>
+    <p class="sub">每次 push 都会在 GitHub Actions 的 Node 22 runner 上执行：装依赖 → 构建 → 起服务 → 打真实 HTTP 请求并断言状态码。</p>
+
+    <div class="ev">
+<span class="d"># GET /api/health</span>
+HTTP <span class="k">200</span>
+{<span class="n">"status"</span>:"ok",<span class="n">"version"</span>:"0.5.3",<span class="n">"apiVersion"</span>:1}
+
+<span class="d"># GET /api/state</span>
+HTTP <span class="k">200</span>
+
+<span class="d"># POST /api/publish  （故意发非法请求体）</span>
+HTTP <span class="k">400</span>
+{<span class="n">"error"</span>:"Invalid publish event payload",
+ <span class="n">"details"</span>:["Invalid input: expected string, received undefined"]}
+
+<span class="g">HEALTH_200=ok    STATE_200=ok    PUBLISH_VALIDATION_400=ok</span>
+    </div>
+
+    <div class="grid g3" style="margin-top:var(--sp-5)">
+      <div class="card"><h3>装依赖</h3><p><span class="pill p-ok">通过</span><br><span class="mono">pnpm install --no-frozen-lockfile</span></p></div>
+      <div class="card"><h3>构建</h3><p><span class="pill p-ok">通过</span><br>产出 <span class="mono">dist/app/cli.js</span></p></div>
+      <div class="card"><h3>起服务并打 API</h3><p><span class="pill p-ok">通过</span><br>4132 返回真实 HTTP 响应</p></div>
+    </div>
+
+    <div class="note ok" style="margin-top:var(--sp-5)">
+      为什么 <span class="mono">/api/publish</span> 返回 <b>400 反而是正证据</b>：它证明路由与 zod 校验层真的在工作。
+      如果只是端口开着，这里会是超时，而不是一条结构化的校验错误。
+    </div>
+    <div class="note warn">
+      <span class="mono">--no-frozen-lockfile</span> 的原因：上游 <span class="mono">pnpm-lock.yaml</span> 与
+      <span class="mono">package.json</span> 不一致（lockfile 多出 3 个 specifier），
+      冻结锁文件必然报 <span class="mono">ERR_PNPM_OUTDATED_LOCKFILE</span>。这是上游问题，不是本复刻引入。
+    </div>
+  </div>
+</section>
+
+<section class="blk" id="replica">
+  <div class="wrap">
+    <div class="slabel">Disclosure</div>
+    <h2 class="sec">复刻声明</h2>
+    <p class="sub">本仓库是上游的代码复刻镜像，用于本地实验与学习。它不是上游官方仓库，也不代表上游认可。</p>
+    <table>
+      <thead><tr><th style="width:260px">项</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr><td>上游</td><td><a href="https://github.com/meetopenbot/openbot">meetopenbot/openbot</a></td></tr>
+        <tr><td>许可</td><td><span class="pill p-ok">MIT</span> 逐字保留，版权归上游作者</td></tr>
+        <tr><td>源码改动</td><td><span class="pill p-ok">无</span> 仅追加本页与复刻说明</td></tr>
+        <tr><td>云端 runner 实测</td><td><span class="pill p-ok">已通过</span> 装依赖 / 构建 / 起服务 / 打 API</td></tr>
+        <tr><td>本机安装</td><td><span class="pill p-no">未做</span> 磁盘不足且外接盘为 FAT32</td></tr>
+        <tr><td>公网托管服务本体</td><td><span class="pill p-no">未做</span> 它读写本机 <span class="mono">~/.openbot</span>，公网托管会改变存储与鉴权模型</td></tr>
+        <tr><td>本页性质</td><td><span class="pill p-wt">静态说明页</span> GitHub Pages 只能托管静态文件</td></tr>
+      </tbody>
+    </table>
+    <div class="note">
+      任何使用前请先读上游文档与许可；问题与改进建议优先提给上游。
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <h5>OpenBot</h5>
+        <p>本地优先的 AI agent 运行时。事件 API + SSE，数据留在你自己的机器上。</p>
+      </div>
+      <div>
+        <h5>链接</h5>
+        <ul>
+          <li><a href="https://github.com/sjkncs/openbot">本复刻仓库</a></li>
+          <li><a href="https://github.com/meetopenbot/openbot">上游仓库</a></li>
+          <li><a href="https://github.com/sjkncs/openbot/blob/main/LICENSE">许可证</a></li>
+          <li><a href="https://github.com/sjkncs/openbot/blob/main/REPLICA_NOTES.md">复刻说明</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>本页</h5>
+        <ul>
+          <li>静态说明页，不含追踪脚本</li>
+          <li>无外链字体与 CDN 资源</li>
+          <li>由 sjkncs 维护的复刻镜像</li>
+        </ul>
+      </div>
+    </div>
+    <div class="fbot">
+      <span>MIT License · 版权归上游 OpenBot Contributors</span>
+      <span>本页不代表上游官方立场</span>
+    </div>
+  </div>
 </footer>
+
 </body>
 </html>
