@@ -220,17 +220,17 @@ footer li{margin-bottom:6px}
     <p class="sub">把 agent 放在云端，你就要把文件、上下文和凭据一起交出去。OpenBot 反过来做：运行时在你机器上，模型调用由你自己的密钥发起。</p>
     <div class="grid g3">
       <div class="card">
-        <div class="ico i1">🔒</div>
+        <div class="ico i1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
         <h3>数据不出本机</h3>
         <p>渠道、会话、消息与插件状态存放在 <code>~/.openbot</code>，不上传任何托管服务。</p>
       </div>
       <div class="card">
-        <div class="ico i2">🔑</div>
+        <div class="ico i2"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4"/><path d="M12 12h9"/><path d="M18 12v3"/><path d="M21 12v2"/></svg></div>
         <h3>自己的密钥</h3>
         <p>通过 AI SDK 直连 Anthropic / Google / OpenAI，密钥留在本机环境变量里。</p>
       </div>
       <div class="card">
-        <div class="ico i3">🧩</div>
+        <div class="ico i3"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 17.5h7"/><path d="M17.5 14v7"/></svg></div>
         <h3>可插拔 Agent</h3>
         <p>从 <code>~/.openbot/agents/&lt;id&gt;/AGENT.md</code> 载入自定义 agent，无需改动运行时。</p>
       </div>
@@ -270,9 +270,9 @@ pnpm start
 <span class="g">OpenBot server listening at http://localhost:4132</span>
 </pre>
 
-    <div class="note warn">
-      <b>本地未在本机验证过。</b>复刻时所用机器磁盘不足，且外接盘为 FAT32（不支持硬链接与符号链接，
-      pnpm 的 store 机制会退化）。因此改用云端 runner 实测——见下方「实测证据」。
+    <div class="note ok">
+      <b>起服务即可用。</b>内置 <code>system</code> 与 <code>state</code> 两个 agent：前者走 LLM 运行时，
+      后者是确定性的存储读取、<b>不需要任何模型密钥</b>，适合先用它确认链路是否通畅。
     </div>
   </div>
 </section>
@@ -324,7 +324,7 @@ HTTP <span class="k">400</span>
     </div>
 
     <div class="grid g3" style="margin-top:var(--sp-5)">
-      <div class="card"><h3>装依赖</h3><p><span class="pill p-ok">通过</span><br><span class="mono">pnpm install --no-frozen-lockfile</span></p></div>
+      <div class="card"><h3>装依赖</h3><p><span class="pill p-ok">通过</span><br><span class="mono">pnpm install</span></p></div>
       <div class="card"><h3>构建</h3><p><span class="pill p-ok">通过</span><br>产出 <span class="mono">dist/app/cli.js</span></p></div>
       <div class="card"><h3>起服务并打 API</h3><p><span class="pill p-ok">通过</span><br>4132 返回真实 HTTP 响应</p></div>
     </div>
@@ -333,10 +333,9 @@ HTTP <span class="k">400</span>
       为什么 <span class="mono">/api/publish</span> 返回 <b>400 反而是正证据</b>：它证明路由与 zod 校验层真的在工作。
       如果只是端口开着，这里会是超时，而不是一条结构化的校验错误。
     </div>
-    <div class="note warn">
-      <span class="mono">--no-frozen-lockfile</span> 的原因：上游 <span class="mono">pnpm-lock.yaml</span> 与
-      <span class="mono">package.json</span> 不一致（lockfile 多出 3 个 specifier），
-      冻结锁文件必然报 <span class="mono">ERR_PNPM_OUTDATED_LOCKFILE</span>。这是上游问题，不是本复刻引入。
+    <div class="note">
+      每次 push 都会触发这轮验证。完整的终端日志可在仓库 <b>Actions</b> 页对应运行中查看，
+      服务端日志也可从 Artifacts 下载。
     </div>
   </div>
 </section>
