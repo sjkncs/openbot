@@ -1,0 +1,11 @@
+# 构建上下文裁剪（勿排除 src/assets：build 脚本要拷 icon.svg）
+node_modules
+dist
+.git
+.gitignore
+.github
+docs
+*.log
+.DS_Store
+.slidep
+.replica-notes.tmp
